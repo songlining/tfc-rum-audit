@@ -33,12 +33,13 @@ hashicorp/aws                                  8021     22.3%
 hashicorp/azurerm                              5120     14.2%
 ...
 
-CISCO ACI — OPTIMISATION CANDIDATES
+CISCO ACI — REVIEW CANDIDATES (sprawl indicators, not auto-removable)
 ----------------------------------------------------------------
   aci_epg_to_contract                               4210  [standalone-relation]
   aci_rest_managed                                  1830  [generic-rest]
   ...
-  Candidate total                 : 9,912 RUM (47.1% of 21,055 ACI RUM)
+  standalone-relation : 6040 RUM — relations as separate resources.
+  generic-rest        : 1830 RUM — aci_rest / aci_rest_managed (NOT per-object waste).
 ```
 
 *(Numbers above are illustrative.)*
@@ -63,11 +64,19 @@ tool fills that gap so you can see *what to optimise* before you optimise it.
 
 - **Org-wide RUM by provider**, with share-of-total percentages.
 - **Top resource types** by instance count (the real cost drivers).
-- **Cisco ACI optimisation-candidate analysis** — flags structural RUM multipliers:
-  - *standalone relation* resources (`aci_epg_to_contract`, `aci_relation_from_*`, `*_to_*`, …)
-    that can often be collapsed into a typed resource's inline `relation_*` arguments;
-  - *generic REST escape-hatch* resources (`aci_rest`, `aci_rest_managed`) where a typed
-    resource would manage the same object with less sprawl.
+- **Cisco ACI review-candidate analysis** — itemises the resource *categories* most often
+  associated with ACI RUM sprawl, so you know where to look first:
+  - *standalone relation* resources (`aci_epg_to_contract`, `aci_relation_from_*`, `*_to_*`, …).
+    These are flagged for review, **not** assumed removable — the old inline `relation_fv_rs_*`
+    arguments are largely deprecated and v2.16 *added* these standalone resources, so they are
+    frequently intentional. They are only reducible where a supported inline equivalent exists
+    **and** the parent object is managed in the same state.
+  - *generic REST escape-hatch* resources (`aci_rest`, `aci_rest_managed`). These are **not**
+    a per-object RUM source (1:1 with typed resources); `aci_rest_managed` can actually
+    *consolidate* a parent plus its children into one resource and **reduce** RUM.
+
+  The tool flags and totals these categories but deliberately does **not** claim a "%
+  collapsible" figure, because that cannot be determined from state alone.
 - **Correct RUM semantics** — data sources (`data.*`) are *not* billable and are excluded
   (reported separately). The computed managed-instance total is cross-checked against each
   workspace's authoritative `billable-rum-count`.
@@ -211,9 +220,12 @@ python3 tfc_rum_audit.py --provider aci --csv out/
   out of every RUM figure.
 - **RUM BY PROVIDER** — managed instances grouped by provider source, with share of total.
 - **TOP RESOURCE TYPES** — the individual resource types consuming the most RUM.
-- **CISCO ACI — OPTIMISATION CANDIDATES** — when an ACI provider is present, the structural
-  multipliers (standalone relation resources, generic REST escape hatches) are itemised and
-  totalled, with an estimate of how much of the ACI RUM is potentially collapsible.
+- **CISCO ACI — REVIEW CANDIDATES** — when an ACI provider is present, the resource categories
+  most associated with RUM sprawl (standalone relation resources, generic REST escape hatches)
+  are itemised and totalled **as review indicators**, with honest notes on when each is — and is
+  not — actually reducible. The defensible levers (bundle children into `aci_rest_managed`
+  `child{}` blocks, don't manage APIC auto-created children, don't model defaults) are printed
+  alongside.
 - **SKIPPED WORKSPACES** — workspaces with no current state version or insufficient access;
   they are excluded, not fatal.
 
@@ -245,9 +257,10 @@ Verified against the live API:
 
 - Reads the **current** state version only — a point-in-time snapshot, not a time series.
 - Requires read access to the target org (and to each workspace's state version).
-- The ACI optimisation flags are **heuristics**: they identify *candidate* resource types to
-  review, not resources that are automatically safe to remove. Always validate in a sandbox
-  before collapsing relationships or replacing `aci_rest*` resources.
+- The ACI flags are **heuristics** that identify resource *categories* worth reviewing, not
+  resources that are safe to remove. State alone cannot tell whether a standalone relation has a
+  supported inline equivalent or whether an object is intentionally managed — validate any change
+  in a sandbox first.
 - The tool reads data; it never mutates anything (no plans, applies, or deletes).
 
 ## Contributing

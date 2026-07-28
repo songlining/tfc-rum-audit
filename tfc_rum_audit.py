@@ -41,10 +41,16 @@ import sys
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Cisco ACI resource types that are structural RUM multipliers: the generic
-# REST escape hatches (one managed object per resource) and the standalone
-# relationship objects that can often be collapsed into a typed resource's
-# inline `relation_*` arguments.
+# Cisco ACI resource categories commonly linked to RUM sprawl. These are flagged
+# as REVIEW indicators only — they are NOT automatically removable:
+#   * standalone relationship objects (`aci_epg_to_*`, `aci_relation_from_*`):
+#     removable only where a supported inline equivalent exists AND the parent is
+#     in the same state. The old inline relation_fv_rs_* args are largely
+#     DEPRECATED and v2.16 added these standalone resources, so they are often
+#     intentional rather than waste.
+#   * generic REST escape hatches (`aci_rest`, `aci_rest_managed`): NOT a
+#     per-object RUM source (1:1 with typed). `aci_rest_managed` can CONSOLIDATE
+#     a parent + its children (child{} blocks) into ONE resource and reduce RUM.
 ESCAPE_HATCH_TYPES = {"aci_rest", "aci_rest_managed"}
 
 
@@ -87,7 +93,11 @@ def provider_source(provider_key: str) -> str:
 
 
 def classify_aci_type(rtype: str) -> list[str]:
-    """Heuristic optimisation flags for a Cisco ACI managed resource type."""
+    """Heuristic review flags for a Cisco ACI managed resource type.
+
+    Labels the category a type falls into (standalone-relation / generic-rest).
+    These are indicators for human review, NOT confirmation that the resource
+    can be removed or consolidated."""
     flags = []
     if rtype in ESCAPE_HATCH_TYPES:
         flags.append("generic-rest")
@@ -251,14 +261,14 @@ def print_report(org_name, agg, results, skipped, provider_filter=None, top=15):
         print(f"{rtype:46} {src:16} {count:>8}")
     print()
 
-    # ACI optimisation-candidate analysis.
+    # ACI review-candidate analysis: flags resource *categories* commonly linked
+    # to RUM sprawl. These are indicators for review, NOT automatically removable.
     aci_sources = [s for s in by_provider if "aci" in s.lower()]
     if aci_sources:
-        print("CISCO ACI — OPTIMISATION CANDIDATES")
+        print("CISCO ACI — REVIEW CANDIDATES (sprawl indicators, not auto-removable)")
         print("-" * 64)
-        cand_relation = cand_rest = aci_total = 0
+        cand_relation = cand_rest = 0
         for src in aci_sources:
-            aci_total += by_provider[src]
             for rtype, count in sorted(by_type[src].items(),
                                        key=lambda kv: kv[1], reverse=True):
                 flags = classify_aci_type(rtype)
@@ -268,14 +278,20 @@ def print_report(org_name, agg, results, skipped, provider_filter=None, top=15):
                     cand_rest += count
                 flag_str = ("  [" + ",".join(flags) + "]") if flags else ""
                 print(f"  {rtype:48} {count:>7}{flag_str}")
-        cand_total = cand_relation + cand_rest
         print("-" * 64)
-        print(f"  Standalone relation resources : {cand_relation} RUM "
-              f"(collapse into typed resources' inline relation_* args)")
-        print(f"  Generic REST escape hatch       : {cand_rest} RUM "
-              f"(prefer typed resources over aci_rest/_managed)")
-        print(f"  Candidate total                 : {cand_total} RUM "
-              f"({pct(cand_total, aci_total):.1f}% of {aci_total} ACI RUM)")
+        print(f"  standalone-relation : {cand_relation} RUM — relations as separate resources.")
+        print("      Inline relation_fv_rs_* args are largely DEPRECATED and v2.16 ADDED")
+        print("      these standalone resources, so they are usually intentional. Removable")
+        print("      only where a supported inline equivalent exists AND same-state coupling")
+        print("      is acceptable — the tool cannot determine this from state.")
+        print(f"  generic-rest        : {cand_rest} RUM — aci_rest / aci_rest_managed.")
+        print("      NOT a per-object RUM source (1:1 with typed). aci_rest_managed can")
+        print("      CONSOLIDATE a parent + children (child{} blocks) into ONE resource and")
+        print("      actually REDUCE RUM — do not treat its presence as waste.")
+        print()
+        print("  Defensible ACI RUM levers: bundle children into aci_rest_managed child{}")
+        print("  blocks; don't manage APIC auto-created children (issue #1394); don't model")
+        print("  objects that can stay at provider defaults.")
         print()
 
     if skipped:
