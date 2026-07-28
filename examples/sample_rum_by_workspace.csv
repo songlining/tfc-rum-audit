@@ -1,0 +1,8 @@
+workspace,workspace_id,billable_rum,managed_instances,top_provider
+aci-prod-fabric-01,ws-1,10868,10868,ciscodevnet/aci
+vmware-vms,ws-4,8000,8000,hashicorp/vsphere
+aci-prod-fabric-02,ws-2,7772,7772,ciscodevnet/aci
+azure-landing-zone,ws-5,5000,5000,hashicorp/azurerm
+aci-nonprod-fabric,ws-3,3778,3778,ciscodevnet/aci
+aws-shared-services,ws-6,1500,1500,hashicorp/aws
+vault-platform-config,ws-7,500,500,hashicorp/vault

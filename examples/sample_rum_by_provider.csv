@@ -1,0 +1,6 @@
+provider,rum,pct_of_managed
+ciscodevnet/aci,22418,59.91
+hashicorp/vsphere,8000,21.38
+hashicorp/azurerm,5000,13.36
+hashicorp/aws,1500,4.01
+hashicorp/vault,500,1.34

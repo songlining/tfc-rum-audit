@@ -8,6 +8,8 @@ venv/
 # Tool output
 out/
 *.csv
+# ...except committed sample CSVs in examples/
+!examples/*.csv
 
 # OS / editor
 .DS_Store
