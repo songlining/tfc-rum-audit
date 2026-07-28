@@ -1,0 +1,88 @@
+================================================================================
+  SAMPLE OUTPUT - tfc-rum-audit  (ILLUSTRATIVE DATA, NOT A REAL CUSTOMER ORG)
+  Generated from synthetic workspaces that mirror a typical Cisco-ACI-heavy
+  HCP Terraform estate to show the report format. Real runs read live state
+  via tfctl; numbers below are fabricated for illustration only.
+================================================================================
+
+================================================================
+TFC RUM AUDIT — org: SAMPLE (illustrative - not real customer data)   workspaces scanned: 7
+================================================================
+Total billable RUM (sum of billable-rum-count): 37418
+Total managed resource instances (computed):     37418
+Non-billable (excluded): data sources=358, null_resource/terraform_data=51
+Skipped workspaces (no state / no access):       1
+
+RUM BY PROVIDER (managed resources only)
+----------------------------------------------------------------
+provider                                        RUM       %
+----------------------------------------------------------------
+ciscodevnet/aci                               22418   59.9%
+hashicorp/vsphere                              8000   21.4%
+hashicorp/azurerm                              5000   13.4%
+hashicorp/aws                                  1500    4.0%
+hashicorp/vault                                 500    1.3%
+
+TOP RESOURCE TYPES (managed, matched providers; top 20)
+----------------------------------------------------------------
+type                                           provider            count
+----------------------------------------------------------------
+vsphere_virtual_machine                        hashicorp/vsphere     6000
+aci_epg_to_contract                            ciscodevnet/aci      5200
+aci_epg_to_domain                              ciscodevnet/aci      2600
+aci_application_epg                            ciscodevnet/aci      2350
+aci_rest_managed                               ciscodevnet/aci      2150
+aci_bridge_domain                              ciscodevnet/aci      2050
+azurerm_network_security_rule                  hashicorp/azurerm     2000
+aci_subnet                                     ciscodevnet/aci      1800
+aci_epg_to_static_path                         ciscodevnet/aci      1550
+vsphere_virtual_machine_disk                   hashicorp/vsphere     1200
+aci_contract                                   ciscodevnet/aci      1030
+azurerm_subnet                                 hashicorp/azurerm      800
+azurerm_role_assignment                        hashicorp/azurerm      800
+aci_relation_from_bridge_domain_to_l3_outside  ciscodevnet/aci       800
+aci_contract_subject                           ciscodevnet/aci       790
+aci_filter                                     ciscodevnet/aci       640
+aci_filter_entry                               ciscodevnet/aci       540
+vsphere_network                                hashicorp/vsphere      400
+azurerm_network_security_group                 hashicorp/azurerm      400
+aws_route53_record                             hashicorp/aws         400
+
+CISCO ACI — REVIEW CANDIDATES (sprawl indicators, not auto-removable)
+----------------------------------------------------------------
+  aci_epg_to_contract                                 5200  [standalone-relation]
+  aci_epg_to_domain                                   2600  [standalone-relation]
+  aci_application_epg                                 2350
+  aci_rest_managed                                    2150  [generic-rest]
+  aci_bridge_domain                                   2050
+  aci_subnet                                          1800
+  aci_epg_to_static_path                              1550  [standalone-relation]
+  aci_contract                                        1030
+  aci_relation_from_bridge_domain_to_l3_outside        800  [standalone-relation]
+  aci_contract_subject                                 790
+  aci_filter                                           640
+  aci_filter_entry                                     540
+  aci_relation_to_consumed_contract                    350  [standalone-relation]
+  aci_application_profile                              240
+  aci_vrf                                              170
+  aci_l3_outside                                       120
+  aci_tenant                                            38
+----------------------------------------------------------------
+  standalone-relation : 10500 RUM — relations as separate resources.
+      Inline relation_fv_rs_* args are largely DEPRECATED and v2.16 ADDED
+      these standalone resources, so they are usually intentional. Removable
+      only where a supported inline equivalent exists AND same-state coupling
+      is acceptable — the tool cannot determine this from state.
+  generic-rest        : 2150 RUM — aci_rest / aci_rest_managed.
+      NOT a per-object RUM source (1:1 with typed). aci_rest_managed can
+      CONSOLIDATE a parent + children (child{} blocks) into ONE resource and
+      actually REDUCE RUM — do not treat its presence as waste.
+
+  Defensible ACI RUM levers: bundle children into aci_rest_managed child{}
+  blocks; don't manage APIC auto-created children (issue #1394); don't model
+  objects that can stay at provider defaults.
+
+SKIPPED WORKSPACES
+----------------------------------------------------------------
+  legacy-dcnm                    (ws-8): Resource not found on app.terraform.io or you are unauthoriz
+

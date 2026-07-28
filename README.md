@@ -211,6 +211,14 @@ tfctl profile set default_organization example-org
 python3 tfc_rum_audit.py --provider aci --csv out/
 ```
 
+## Sample output
+
+`examples/sample-report.txt` is a full sample run against synthetic workspaces that
+mirror a Cisco-ACI-heavy estate (ACI ~60% of ~37k RUM), so you can see the exact
+report format - including the Cisco ACI review-candidates section - without a
+live org. The matching `examples/sample_rum_by_*.csv` files show the CSV export
+format. All numbers are illustrative.
+
 ## Output explained
 
 - **Total billable RUM** — the sum of each workspace's authoritative `billable-rum-count`.

@@ -53,6 +53,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 #     a parent + its children (child{} blocks) into ONE resource and reduce RUM.
 ESCAPE_HATCH_TYPES = {"aci_rest", "aci_rest_managed"}
 
+# Managed resource types HashiCorp explicitly EXCLUDES from RUM billing
+# (https://developer.hashicorp.com/terraform/cloud-docs/overview/estimate-hcp-terraform-cost).
+# They can appear in the providers map but are not billable, so they are separated
+# out to keep the computed managed total aligned with `billable-rum-count`.
+NON_BILLABLE_MANAGED = {"null_resource", "terraform_data"}
+
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -143,8 +149,9 @@ def fetch_workspace_state(ws, profile=None):
         return {"workspace": ws, "error": err}
 
     providers = data.get("providers") or {}
-    managed = defaultdict(lambda: defaultdict(int))   # source -> type -> count
+    managed = defaultdict(lambda: defaultdict(int))    # source -> type -> count
     data_srcs = defaultdict(lambda: defaultdict(int))  # source -> type -> count
+    excluded = defaultdict(lambda: defaultdict(int))   # non-billable managed (null_resource/terraform_data)
     managed_total = 0
     for pkey, types in providers.items():
         src = provider_source(pkey)
@@ -152,6 +159,8 @@ def fetch_workspace_state(ws, profile=None):
             count = int(count)
             if rtype.startswith("data."):
                 data_srcs[src][rtype[len("data."):]] += count
+            elif rtype in NON_BILLABLE_MANAGED:
+                excluded[src][rtype] += count
             else:
                 managed[src][rtype] += count
                 managed_total += count
@@ -161,6 +170,7 @@ def fetch_workspace_state(ws, profile=None):
         "processed": data.get("processed"),
         "managed": managed,
         "data": data_srcs,
+        "excluded": excluded,
         "managed_total": managed_total,
     }
 
@@ -203,6 +213,11 @@ def aggregate(results):
             for rtype, count in types.items():
                 data_by_provider[src] += count
                 total_data += count
+    total_excluded = 0
+    for res in results:
+        for src, types in res.get("excluded", {}).items():
+            for rtype, count in types.items():
+                total_excluded += count
     return {
         "by_provider": by_provider,
         "by_type": by_type,
@@ -210,6 +225,7 @@ def aggregate(results):
         "total_rum": total_rum,
         "total_managed": total_managed,
         "total_data": total_data,
+        "total_excluded": total_excluded,
     }
 
 
@@ -228,7 +244,8 @@ def print_report(org_name, agg, results, skipped, provider_filter=None, top=15):
     print("=" * 64)
     print(f"Total billable RUM (sum of billable-rum-count): {total_rum}")
     print(f"Total managed resource instances (computed):     {total_managed}")
-    print(f"Data sources (non-billable, excluded):           {agg['total_data']}")
+    print(f"Non-billable (excluded): data sources={agg['total_data']}, "
+          f"null_resource/terraform_data={agg.get('total_excluded', 0)}")
     if skipped:
         print(f"Skipped workspaces (no state / no access):       {len(skipped)}")
     print()
