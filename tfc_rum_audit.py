@@ -25,7 +25,7 @@ Auth: uses tfctl's configured profiles. Point it at a profile whose
 
 Examples:
   python3 tfc_rum_audit.py                     # audit active profile's org
-  python3 tfc_rum_audit.py --profile rba       # audit via a specific profile
+  python3 tfc_rum_audit.py --profile customer-org  # audit via a specific profile
   python3 tfc_rum_audit.py --provider aci      # focus on Cisco ACI detail
   python3 tfc_rum_audit.py --csv out/          # export CSV detail
 """
@@ -75,7 +75,7 @@ def provider_source(provider_key: str) -> str:
     """Normalise a state provider key to its `org/name` source.
 
     'provider["registry.terraform.io/ciscodevnet/aci"]' -> 'ciscodevnet/aci'
-    'provider["app.terraform.io/rba/aci"]'              -> 'rba/aci' (private mirror)
+    'provider["app.terraform.io/my-org/aci"]'            -> 'my-org/aci' (private mirror)
     """
     inner = provider_key
     if inner.startswith('provider["') and inner.endswith('"]'):
