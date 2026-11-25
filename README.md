@@ -130,10 +130,10 @@ Key ideas you need for this tool:
 
 ### The `tfctl` agent SKILL
 
-This tool was built with (and pairs well with) a **pi coding-agent skill for `tfctl`** — a
-`SKILL.md` that teaches an AI agent how to drive `tfctl` correctly and safely. It ships in this
-repo at [`skill/tfctl/SKILL.md`](skill/tfctl/SKILL.md), with its `LEARNINGS.md` sidecar. If you use
-a pi-compatible agent, the skill gives it:
+This tool was built with (and pairs well with) an **agent skill for `tfctl`** — a `SKILL.md`
+that teaches a coding agent how to drive `tfctl` correctly and safely. It ships in this repo at
+[`skill/tfctl/SKILL.md`](skill/tfctl/SKILL.md), with its `LEARNINGS.md` sidecar. For any agent
+that loads skills from a directory, the skill gives it:
 
 - **Hard rules** — e.g. *never* pipe `tfctl` JSON to an external `jq` (use the built-in `--jq`),
   *never* issue `-X DELETE` (deletes require a human), resolve names with `-p` instead of a
@@ -153,8 +153,9 @@ In short: the SKILL makes an agent a competent `tfctl` operator; this tool is a 
 repeatable application of the two API calls that matter for RUM analysis.
 
 ```bash
-# install the skill for a pi or Claude Code agent
-mkdir -p ~/.pi/agent/skills && cp -R skill/tfctl ~/.pi/agent/skills/tfctl
+# copy skill/tfctl/ into whatever directory your agent loads skills from,
+# e.g. ~/.config/<agent>/skills/tfctl, ~/agent-skills/tfctl, or your project's skills dir
+mkdir -p "$SKILLS_DIR/tfctl" && cp -R skill/tfctl/. "$SKILLS_DIR/tfctl/"
 ```
 
 > **Don't have `tfctl`?** The method is portable. The tool only needs two Terraform Cloud v2

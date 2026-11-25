@@ -229,7 +229,7 @@ When a tfctl task uncovers a **durable** gotcha — one that would cost 5+ minut
 
 ### How to capture (append-only, never edit SKILL.md inline)
 
-Append ONE line to the sidecar `LEARNINGS.md` next to this skill (`~/.pi/agent/skills/tfctl/LEARNINGS.md`). Use this exact format:
+Append ONE line to the sidecar `LEARNINGS.md` next to this `SKILL.md` (in whatever skills directory your agent loads it from). Use this exact format:
 
 ```
 - [yyyy-mm-dd] [category] one-sentence insight · cmd: `tfctl ...` · exit: N
